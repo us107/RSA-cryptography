@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RSA Encryption & Decryption</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; }
+    textarea, input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
+    button { width: 100%; padding: 10px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    .output { background: #f1f1f1; padding: 10px; border-radius: 5px; margin-top: 10px; word-wrap: break-word; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 RSA Encryption & Decryption</h1>
+
+    <h2>🔓 Encrypt Message</h2>
+    <input type="text" id="plainText" placeholder="Enter message to encrypt">
+    <button onclick="encryptMessage()">Encrypt Message</button>
+
+    <div class="output" id="publicKeyOutput"></div>
+    <div class="output" id="cipherTextOutput"></div>
+
+    <h2>🗝️ Decrypt Ciphertext</h2>
+    <textarea id="cipherText" placeholder="Enter ciphertext to decrypt"></textarea>
+    <textarea id="privateKey" placeholder="Enter private key"></textarea>
+    <button onclick="decryptMessage()">Decrypt Message</button>
+
+    <div class="output" id="decryptedTextOutput"></div>
+  </div>
+
+  <script>
+    let publicKey, privateKey;
+
+    function generateKeys() {
+      const { generateKeyPairSync } = window.crypto.subtle;
+
+      return window.crypto.subtle.generateKey({
+        name: "RSA-OAEP",
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: "SHA-256"
+      }, true, ["encrypt", "decrypt"]);
+    }
+
+    async function exportKey(key) {
+      const exported = await window.crypto.subtle.exportKey("spki", key);
+      return btoa(String.fromCharCode(...new Uint8Array(exported)));
+    }
+
+    async function encryptMessage() {
+      const text = document.getElementById('plainText').value;
+      const keyPair = await generateKeys();
+      publicKey = keyPair.publicKey;
+      privateKey = keyPair.privateKey;
+
+      const encoder = new TextEncoder();
+      const encodedText = encoder.encode(text);
+      const cipherBuffer = await window.crypto.subtle.encrypt({
+        name: "RSA-OAEP"
+      }, publicKey, encodedText);
+
+      const cipherText = btoa(String.fromCharCode(...new Uint8Array(cipherBuffer)));
+      document.getElementById('cipherTextOutput').innerText = `Ciphertext: ${cipherText}`;
+
+      const exportedPubKey = await exportKey(publicKey);
+      document.getElementById('publicKeyOutput').innerText = `Public Key: ${exportedPubKey}`;
+    }
+
+    async function decryptMessage() {
+      const cipherText = document.getElementById('cipherText').value;
+      const buffer = Uint8Array.from(atob(cipherText), c => c.charCodeAt(0));
+
+      const decryptedBuffer = await window.crypto.subtle.decrypt({
+        name: "RSA-OAEP"
+      }, privateKey, buffer);
+
+      const decoder = new TextDecoder();
+      const decryptedText = decoder.decode(decryptedBuffer);
+
+      document.getElementById('decryptedTextOutput').innerText = `Decrypted Message: ${decryptedText}`;
+    }
+  </script>
+</body>
+</html>
